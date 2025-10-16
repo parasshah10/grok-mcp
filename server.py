@@ -21,7 +21,7 @@ async def call_grok_api(prompt: str) -> str:
     if not GROK_API_KEY:
         return "Error: GROK_API_KEY environment variable not set"
     
-    async with httpx.AsyncClient(timeout=180.0) as client:
+    async with httpx.AsyncClient(timeout=1000.0) as client:
         try:
             response = await client.post(
                 f"{GROK_API_URL}/chat/completions",

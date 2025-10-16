@@ -1,7 +1,7 @@
 [project]
-name = "claire-mcp"
+name = "grok-mcp"
 version = "0.1.0"
-dependencies = ["fastmcp"]
+dependencies = ["fastmcp", "httpx"]
 
 [project.scripts]
-claire-mcp = "server:main"
+grok-mcp = "server:main"

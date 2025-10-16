@@ -30,7 +30,7 @@ async def call_grok_api(prompt: str) -> str:
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "grok-beta",
+                    "model": "grok-4-fast",
                     "messages": [
                         {"role": "user", "content": prompt}
                     ],

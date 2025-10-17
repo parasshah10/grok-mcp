@@ -1,7 +1,7 @@
 [project]
 name = "grok-mcp"
 version = "0.1.0"
-dependencies = ["fastmcp", "httpx"]
+dependencies = ["fastmcp", "openai"]
 
 [project.scripts]
 grok-mcp = "server:main"

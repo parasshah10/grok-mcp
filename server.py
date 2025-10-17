@@ -4,7 +4,7 @@ Provides access to Grok's agentic capabilities: web search, X platform, code exe
 """
 
 from fastmcp import FastMCP
-import httpx
+from openai import AsyncOpenAI
 import os
 from typing import Optional
 

@@ -15,33 +15,37 @@ mcp = FastMCP("Grok Research Platform")
 GROK_API_URL = os.getenv("GROK_API_URL", "https://api.x.ai/v1")
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 
+# Initialize OpenAI client configured for Grok
+grok_client = AsyncOpenAI(
+    api_key=GROK_API_KEY,
+    base_url=GROK_API_URL
+)
+
 async def call_grok_api(prompt: str) -> str:
-    """Call Grok API and return response"""
+    """Call Grok API with streaming and return complete response"""
     
     if not GROK_API_KEY:
         return "Error: GROK_API_KEY environment variable not set"
     
-    async with httpx.AsyncClient(timeout=1000.0) as client:
-        try:
-            response = await client.post(
-                f"{GROK_API_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {GROK_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "grok-4-fast",
-                    "messages": [
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.7
-                }
-            )
-            response.raise_for_status()
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
-        except Exception as e:
-            return f"Error calling Grok API: {str(e)}"
+    try:
+        stream = await grok_client.chat.completions.create(
+            model="grok-4-fast",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            stream=True  # Enable streaming
+        )
+        
+        full_response = ""
+        async for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                full_response += chunk.choices[0].delta.content
+        
+        return full_response
+        
+    except Exception as e:
+        return f"Error calling Grok API: {str(e)}"
 
 @mcp.tool()
 async def grok(

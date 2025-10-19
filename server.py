@@ -876,9 +876,10 @@ async def grok(
                 timeout limits). Default True.
     
     Returns:
-        Research findings, analysis, or answer to your query. If async_mode=True,
-        returns a task_id instead. Length varies from brief responses to extensive
-        multi-thousand word research reports based on your prompt.
+        Research findings, analysis, or answer to your query. Length varies from
+        brief responses to extensive multi-thousand word research reports based
+        on your prompt. If async_mode=True, returns a task_id instead - retrieve
+        results with grok_check_task().
     """
     
     # Build the full prompt with research trail request if needed

@@ -6,6 +6,9 @@ Provides access to Grok's agentic capabilities: web search, X platform, code exe
 from fastmcp import FastMCP
 from openai import AsyncOpenAI
 import os
+import time
+import uuid
+import asyncio
 from typing import Optional
 
 # Initialize MCP server
@@ -20,6 +23,11 @@ grok_client = AsyncOpenAI(
     api_key=GROK_API_KEY,
     base_url=GROK_API_URL
 )
+
+# Task storage for async mode
+tasks = {}
+MAX_TASKS = 100
+TASK_EXPIRY_HOURS = 24
 
 async def call_grok_api(prompt: str) -> str:
     """Call Grok API with streaming and return complete response"""
@@ -47,10 +55,42 @@ async def call_grok_api(prompt: str) -> str:
     except Exception as e:
         return f"Error calling Grok API: {str(e)}"
 
+def cleanup_old_tasks():
+    """Remove tasks older than TASK_EXPIRY_HOURS or exceed MAX_TASKS"""
+    current_time = time.time()
+    expiry_threshold = current_time - (TASK_EXPIRY_HOURS * 3600)
+    
+    # Remove expired tasks
+    expired = [tid for tid, task in tasks.items() 
+               if task["created_at"] < expiry_threshold]
+    for tid in expired:
+        del tasks[tid]
+    
+    # If still too many, remove oldest
+    if len(tasks) > MAX_TASKS:
+        sorted_tasks = sorted(tasks.items(), key=lambda x: x[1]["created_at"])
+        to_remove = len(tasks) - MAX_TASKS
+        for tid, _ in sorted_tasks[:to_remove]:
+            del tasks[tid]
+
+async def execute_task_background(task_id: str, prompt: str):
+    """Execute Grok research in background and update task status"""
+    try:
+        tasks[task_id]["status"] = "running"
+        result = await call_grok_api(prompt)
+        tasks[task_id]["status"] = "completed"
+        tasks[task_id]["result"] = result
+        tasks[task_id]["completed_at"] = time.time()
+    except Exception as e:
+        tasks[task_id]["status"] = "failed"
+        tasks[task_id]["error"] = str(e)
+        tasks[task_id]["completed_at"] = time.time()
+
 @mcp.tool()
 async def grok(
     prompt: str,
-    include_research_trail: bool = False
+    include_research_trail: bool = False,
+    async_mode: bool = True
 ) -> str:
     """
     Universal interface to Grok - an agentic AI research and analysis platform.
@@ -281,6 +321,35 @@ async def grok(
     response length. Use judiciously based on whether methodology matters.
     
     ═══════════════════════════════════════════════════════════════════════════
+    ASYNC MODE (RECOMMENDED)
+    ═══════════════════════════════════════════════════════════════════════════
+    
+    async_mode: Optional[bool] = True (default)
+    
+    Grok queries typically take 15-60+ seconds, even for simple lookups, because
+    they involve real-time web/X searches and analysis. Most MCP clients will
+    timeout on connections longer than 10-30 seconds.
+    
+    ASYNC MODE (default=True, recommended):
+    - Returns task_id immediately
+    - Research executes in background
+    - Retrieve results with grok_check_task(task_id)
+    - Prevents timeout failures
+    
+    SYNC MODE (async_mode=False):
+    - Waits for complete response before returning
+    - Only use if your MCP client has no timeout limits
+    - Simpler for one-off testing
+    
+    Workflow:
+    1. grok(prompt) → Returns task_id instantly (async is default)
+    2. grok_check_task(task_id) → Check status after 20-30s
+    3. If completed, retrieve full results
+    4. If still running, check again
+    
+    Tasks stored for 24 hours (max 100 tasks).
+    
+    ═══════════════════════════════════════════════════════════════════════════
     ADVANCED PROMPTING GUIDELINES
     ═══════════════════════════════════════════════════════════════════════════
     
@@ -422,7 +491,11 @@ async def grok(
     For specific content types:
       filter:links (posts with URLs)
       filter:media (posts with images/videos)
+      filter:replies (posts that are replies)
       filter:verified (from verified accounts)
+      
+    For URL filtering:
+      url:domain
       
     For focused topics:
       "exact phrase" for precision
@@ -796,11 +869,16 @@ async def grok(
         include_research_trail: Whether to include detailed methodology 
                 documentation showing Grok's research process step-by-step.
                 Default False.
+                
+        async_mode: If True (default), returns a task_id immediately. Research
+                executes in background; retrieve with grok_check_task(task_id).
+                If False, waits for completion (only use if your client has no
+                timeout limits). Default True.
     
     Returns:
-        Research findings, analysis, or answer to your query. Length varies from
-        brief responses to extensive multi-thousand word research reports based
-        on your prompt.
+        Research findings, analysis, or answer to your query. If async_mode=True,
+        returns a task_id instead. Length varies from brief responses to extensive
+        multi-thousand word research reports based on your prompt.
     """
     
     # Build the full prompt with research trail request if needed
@@ -847,10 +925,80 @@ Also include at the end:
 Be thorough and honest about your methodology.
 """
     
-    # Call Grok API
-    result = await call_grok_api(full_prompt)
+    # Handle async mode
+    if async_mode:
+        cleanup_old_tasks()
+        task_id = f"grok_{uuid.uuid4().hex[:8]}"
+        tasks[task_id] = {
+            "status": "pending",
+            "created_at": time.time(),
+            "completed_at": None,
+            "result": None,
+            "error": None,
+            "prompt": prompt[:200]  # Store snippet for debugging
+        }
+        
+        # Start background task
+        asyncio.create_task(execute_task_background(task_id, full_prompt))
+        
+        return f"Task started: {task_id}\n\nUse grok_check_task('{task_id}') to retrieve results when ready."
     
+    # Synchronous execution
+    result = await call_grok_api(full_prompt)
     return result
+
+
+@mcp.tool()
+async def grok_check_task(task_id: str) -> str:
+    """
+    Check status and retrieve results of an async Grok task.
+    
+    When grok() is called with async_mode=True, it returns a task_id. Use this
+    tool to check if the research is complete and get the results.
+    
+    Returns one of:
+    - "Status: running" → Task in progress, check again in 15-30s
+    - Full research results → Task completed (no "Status:" prefix)
+    - "Status: failed - [error]" → Task failed, see error message
+    - "Status: not_found" → Invalid/expired task_id (kept 24hrs, max 100 tasks)
+    
+    Workflow:
+    1. grok(prompt, async_mode=True) → Returns task_id
+    2. Wait 15-60s depending on complexity
+    3. grok_check_task(task_id) → Check status
+    4. If completed, full results returned
+    5. If running, wait and check again
+    
+    Args:
+        task_id: Task identifier from grok() with async_mode=True
+        
+    Returns:
+        Status update or full research results when completed
+    """
+    
+    cleanup_old_tasks()
+    
+    if task_id not in tasks:
+        return f"Status: not_found - Task '{task_id}' does not exist or has expired (tasks kept 24 hours, max 100 tasks stored)."
+    
+    task = tasks[task_id]
+    status = task["status"]
+    
+    if status == "pending":
+        return "Status: pending - Task queued but not yet started. Check again shortly."
+    
+    elif status == "running":
+        elapsed = int(time.time() - task["created_at"])
+        return f"Status: running - Task in progress (elapsed: {elapsed}s). Check again in 15-30 seconds."
+    
+    elif status == "completed":
+        return task["result"]  # Return results directly, no prefix
+    
+    elif status == "failed":
+        return f"Status: failed - {task['error']}"
+    
+    else:
+        return f"Status: unknown - Unexpected task state: {status}"
 
 
 def main():

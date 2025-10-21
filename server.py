@@ -99,840 +99,232 @@ async def grok(
     async_mode: bool = True
 ) -> str:
     """
-    Universal interface to Grok - an agentic AI research and analysis platform.
+    Autonomous AI research platform with web search, X platform access, and code 
+    execution. You describe goals, Grok intelligently determines which tools to use 
+    and orchestrates execution strategy.
     
-    ═══════════════════════════════════════════════════════════════════════════
-    WHAT GROK IS
-    ═══════════════════════════════════════════════════════════════════════════
+    CAPABILITIES
     
-    Grok is an intelligent research platform that autonomously orchestrates 
-    multiple tools to accomplish your goals. Think of it as a research analyst 
-    with deep expertise and access to comprehensive information sources, not a 
-    simple search engine.
+    WEB (3 modes):
+    • web_search - Broad queries, top results (5-10s)
+    • web_search_with_snippets - Quick fact-check with excerpts, no page load (3-8s)
+    • browse_page - Full content extraction, specific sections (5-15s/page)
     
-    Grok decides which of its integrated capabilities to use based on your 
-    prompt. You describe what you want to accomplish; Grok determines how to 
-    achieve it.
+    X PLATFORM (5 tools - real-time info, 6-48hr ahead of web):
     
-    ═══════════════════════════════════════════════════════════════════════════
-    CORE CAPABILITIES
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    WEB ACCESS (3 complementary modes):
-    
-      • web_search
-        General queries returning top results across the internet
-        Use for: Broad information gathering, discovering sources
-        Speed: 5-10 seconds
-        
-      • web_search_with_snippets  
-        Quick fact-checking with result excerpts, no full page loading
-        Use for: Rapid verification of specific facts, grabbing quick data
-        Speed: 3-8 seconds
-        
-      • browse_page
-        Reads complete webpage content with intelligent extraction
-        Use for: Detailed information needs, extracting specific sections,
-                 reading documentation, getting full context
-        Speed: 5-15 seconds per page
-        Special: Can follow instructions to extract specific information
-    
-    
-    X PLATFORM ACCESS (5 specialized tools):
-    
-    X.com provides real-time information that often precedes traditional web 
-    sources by 6-48 hours. Expert opinions, breaking developments, and community
-    discussions happen here first.
-    
-      • X keyword search with advanced operators:
-        Powerful syntax for precise queries
-        - User targeting: from:username, to:username, @mentions
-        - Time filtering: since:YYYY-MM-DD, until:YYYY-MM-DD, since_time:unix
-        - Engagement filters: min_faves:N, min_retweets:N, min_replies:N
-        - Content filters: filter:media, filter:links, filter:replies, filter:verified
-        - URL filtering: url:domain
-        - Boolean logic: (A OR B) AND C, -exclude_term
-        - Phrases: "exact phrase match"
-        
-        Use for: Posts from specific people, timebound searches, high-quality
-                 content (engagement filtered), specific topics
-        Speed: 5-10 seconds
-        
-      • X semantic search
-        AI-powered relevance search that understands meaning beyond keywords
-        Can filter by: date ranges, specific users, exclude users, relevancy threshold
-        Use for: Finding posts by concept/meaning, discovering related discussions,
-                 sentiment analysis, when you don't know exact keywords
-        Speed: 5-10 seconds
-        
-      • X user search
-        Find accounts by description or domain expertise
-        Use for: Discovering experts, finding relevant accounts to follow/monitor
-        
-      • X thread fetch
-        Retrieves complete conversation context including parent posts and replies
-        Use for: Understanding full discussions, getting conversation context,
-                 following debate threads
-        
-      • View X video
-        Analyzes video content through frames and subtitle extraction
-        Use for: Understanding video content without watching, extracting claims
-                 from video posts
-    
-    X PLATFORM GUIDANCE:
-    X excels for real-time information (last 24-48 hours), expert opinions, 
-    community sentiment, breaking news, and primary source accounts. Use X 
-    searches to complement web searches when you want human reactions and 
-    discussions, not just established facts. For current discourse, X is 
-    unmatched. For established documentation or historical information, web 
-    search is typically more efficient.
-    
-    
-    CODE EXECUTION (Python 3.12 with scientific computing stack):
-    
-    Full Python environment with extensive libraries:
-    - Data analysis: numpy, pandas, scipy, statsmodels
-    - Visualization: matplotlib
-    - Mathematics: sympy (symbolic), mpmath
-    - Machine learning: torch, networkx
-    - Finance: polygon (stocks), coingecko (crypto) - APIs pre-configured
-    - Optimization: PuLP
-    - Scientific: astropy, qutip, control
-    - And more: biopython, rdkit, chess, pygame, etc.
-    
-    Use for: Calculations, data analysis, statistical verification, financial 
-    metrics, creating comparisons, processing extracted data, verifying claims 
-    with math, generating structured output from unstructured data
-    
-    Note: Code runs in sandboxed offline environment. No pip install or external
-    network access from code. No visualization image outputs (matplotlib generates
-    data only). Focus on computation and analysis.
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    HOW GROK OPERATES
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    AGENTIC BEHAVIOR:
-    Grok autonomously chooses which tools to use and in what sequence. You do 
-    not specify "use web_search then x_keyword_search then code_execution" - 
-    you describe your goal and Grok plans the approach.
-    
-    Example: "What do AI researchers think about o3?"
-    Grok will autonomously:
-    - Recognize this needs expert opinions (X is ideal)
-    - Search from AI researcher accounts
-    - Maybe search web for official announcements
-    - Possibly browse linked technical discussions
-    - Could use code to analyze sentiment patterns
-    - Synthesize findings with sources
-    
-    You didn't specify these steps. Grok determined them based on understanding
-    your underlying need.
-    
-    STATELESS EXECUTION:
-    Each call to Grok is completely independent with no memory of previous calls.
-    
-    Implications:
-    - Grok does NOT remember earlier conversations or research
-    - If building on previous work, include that context in your new prompt
-    - Reference specific URLs or findings from earlier research when relevant
-    - Don't assume continuity - each prompt is a fresh start
-    
-    Example of good follow-up:
-    "Earlier research found o3 scores 75.7% on ARC-AGI at $20/task. Now 
-    investigate whether this cost is prohibitive for practical use - search 
-    for user experiences, compare to alternatives, calculate cost at scale."
-    
-    Bad follow-up:
-    "What about the cost?" (Grok: "Cost of what?")
-    
-    INTELLIGENCE & CONTEXT UNDERSTANDING:
-    Grok is powered by an advanced language model, so rich context significantly
-    improves results. Grok understands:
-    - Nuanced intent beyond literal words
-    - Implied priorities from how you phrase questions
-    - Domain context and technical terminology
-    - What matters based on why you're asking
-    
-    Providing context helps Grok:
-    - Prioritize relevant sources over tangential information
-    - Adjust depth appropriately (overview vs deep analysis)
-    - Tailor synthesis to your actual needs
-    - Make better decisions about tool selection
-    
-    VARIABLE SPEED BY TASK COMPLEXITY:
-    Response time scales with workload:
-    - Simple queries: 6-10 seconds ("Bitcoin price", "Latest from @OpenAI")
-    - Medium research: 15-30 seconds (multi-source with synthesis)
-    - Complex investigation: 30-60 seconds (deep multi-phase research)
-    - Extensive systematic: 60-120 seconds (10+ items researched thoroughly)
-    
-    Your prompt determines complexity. Use "quick" or "brief" for speed, or 
-    structure detailed investigations when thoroughness matters more than speed.
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    WORKLOAD CAPACITY
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    Grok can handle substantial, systematic work. Don't hesitate to assign 
-    extensive research tasks:
-    
-    Examples of workload Grok handles well:
-    - Systematically researching 10-20 items (products, papers, companies, episodes)
-    - Browsing dozens of pages with specific extraction criteria
-    - Multi-day event tracking with daily synthesis
-    - Processing 50+ X posts into sentiment analysis
-    - Complex financial calculations across multiple companies/years
-    - Timeline reconstruction from multiple sources
-    - Comprehensive comparative analysis with code-generated matrices
-    
-    Key principle: Organization enables scale
-    The clearer your structure, the better Grok executes volume work. Break 
-    large tasks into numbered phases, specify extraction criteria, indicate 
-    output structure preferences. Grok excels at systematic execution of 
-    well-organized requests.
-    
-    Response length adapts to task scope. Grok can generate responses from a 
-    few words to tens of thousands of words depending on what you request. How 
-    you prompt determines depth and length.
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    RESEARCH TRAIL PARAMETER
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    include_research_trail: Optional[bool] = False
-    
-    When set to True, Grok documents its complete research methodology:
-    - Every search query executed (exact strings and operators used)
-    - Every URL browsed (full links)
-    - Every tool invoked (with parameters and counts)
-    - Reasoning at each decision point
-    - What was found and how it informed next steps
-    - Summary of overall approach and sources
-    
-    USE RESEARCH TRAIL (True) WHEN:
-    - Complex multi-source research where you want to verify methodology
-    - You anticipate follow-up questions and want to build on the work
-    - Important decisions requiring full transparency and source verification
-    - You want to understand Grok's research strategy for learning
-    - User explicitly asks "how did you find this?" or "show your work"
-    
-    SKIP RESEARCH TRAIL (False) WHEN:
-    - Simple, quick lookups where overhead isn't valuable
-    - Speed is the priority and you trust the result
-    - One-off queries with no expected follow-up
-    - The findings themselves are sufficient without methodology
-    
-    Research trails add minimal time (1-3 seconds) but significantly increase
-    response length. Use judiciously based on whether methodology matters.
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    ASYNC MODE (RECOMMENDED)
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    async_mode: Optional[bool] = True (default)
-    
-    Grok queries typically take 15-60+ seconds, even for simple lookups, because
-    they involve real-time web/X searches and analysis. Most MCP clients will
-    timeout on connections longer than 10-30 seconds.
-    
-    ASYNC MODE (default=True, recommended):
-    - Returns task_id immediately
-    - Research executes in background
-    - Retrieve results with grok_check_task(task_id)
-    - Prevents timeout failures
-    
-    SYNC MODE (async_mode=False):
-    - Waits for complete response before returning
-    - Only use if your MCP client has no timeout limits
-    - Simpler for one-off testing
-    
-    Workflow:
-    1. grok(prompt) → Returns task_id instantly (async is default)
-    2. grok_check_task(task_id) → Check status after 20-30s
-    3. If completed, retrieve full results
-    4. If still running, check again
-    
-    Tasks stored for 24 hours (max 100 tasks).
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    ADVANCED PROMPTING GUIDELINES
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    This section is critical for effective use. Read carefully.
-    
-    
-    ADAPTIVE PROMPTING PHILOSOPHY:
-    
-    Grok responds to your communication style, not rigid templates. Your prompts
-    should adapt to the task at hand:
-    
-    Simple question → Simple prompt:
-      "Bitcoin price"
-      "Latest post from @AnthropicAI"
-      "What is the weather in Tokyo?"
+    • x_keyword_search - Advanced syntax:
+      from:user to:user @mention | since:YYYY-MM-DD until:YYYY-MM-DD within_time:Nh 
+      since_time:unix | min_faves:N min_retweets:N min_replies:N | filter:media|links|
+      replies|verified url:domain | (A OR B) AND C -exclude "exact phrase"
       
-    Complex investigation → Structured prompt:
-      Multiple numbered phases
-      Specific sources to check
-      Synthesis requirements
-      Output format preferences
+    • x_semantic_search - AI relevance search, understands meaning beyond keywords
+    • x_user_search - Find accounts by expertise/description  
+    • x_thread_fetch - Complete conversation with replies (use when you need full 
+      discussion context, not just individual posts)
+    • x_video_view - Analyze via frames/subtitles
+    
+    When to use: X for real-time (<48h), expert opinions, sentiment, breaking news, 
+    discussions. Web for documentation, historical info, official resources.
+    
+    CODE (Python 3.12 sandboxed offline):
+    Data: numpy, pandas, scipy, statsmodels | Viz: matplotlib (data only) | ML: torch, 
+    networkx | Math: sympy, mpmath | Finance: polygon, coingecko (pre-configured) | 
+    Scientific: astropy, qutip, control | Other: PuLP, biopython, rdkit
+    
+    Use for: calculations, analysis, verification, financial metrics, structured output, 
+    processing web/X data. Can combine with searches in same query.
+    
+    Limitations: No pip, no external network (except polygon/coingecko), no image outputs
+    
+    ---
+    OPERATION
+    
+    AGENTIC: Autonomously selects tools and sequences. Don't specify "use web_search 
+    then x_keyword_search" - describe your goal, Grok plans approach.
+    
+    Example: "What do AI researchers think about o3?" → Grok autonomously searches 
+    AI researcher X accounts, checks web announcements, browses discussions, possibly 
+    analyzes sentiment, synthesizes with sources.
+    
+    STATELESS: Zero memory between calls. Include all context in each prompt.
+    ✓ Good: "Earlier research found o3 scores 75.7% on ARC-AGI at $20/task. Now 
+       investigate if this cost is prohibitive - user experiences, alternatives, 
+       calculate cost at scale."
+    ✗ Bad: "What about the cost?" (Cost of what?)
+    
+    INTELLIGENT: Understands nuanced intent, domain context, implied priorities. Rich 
+    context significantly improves results.
+    
+    SPEED: Simple 6-10s | Medium 15-30s | Complex 30-60s | Extensive 60-120s
+    
+    CAPACITY: Handles 10-20 item research, dozens of pages, multi-day tracking, 50+ 
+    post analysis, complex calculations. Organization enables scale - structure requests 
+    clearly for volume work. Response length adapts from brief answers to multi-thousand 
+    word reports based on your prompt.
+    
+    ---
+    PARAMETERS
+    
+    include_research_trail (default: False)
+      True = Documents every query, URL, tool, reasoning, decision points
       
-    Massive systematic task → Highly detailed organization:
-      Clear step-by-step breakdown
-      Explicit extraction criteria per source
-      Code analysis requirements
-      Structured output specification
-    
-    DO NOT feel constrained by any examples shown in this documentation. They 
-    are inspirations demonstrating range, not templates to copy. Your prompts 
-    can be completely different in structure, style, length, and approach.
-    
-    Grok understands:
-    - Natural language variations and informal phrasing
-    - Technical jargon and domain-specific terminology
-    - Implied intent from context
-    - Your underlying goals even when not explicitly stated
-    - Different levels of specificity and detail
-    
-    
-    CONTEXT-AWARE PROMPTING:
-    
-    Grok performs significantly better when you provide relevant context. Consider
-    including:
-    
-    Why you're asking:
-      "I'm deciding between Product A and B for [use case]..."
-      "I'm writing an article about [topic] and need to verify..."
-      "I'm researching for an investment decision in [sector]..."
+      Use when:
+      • Complex multi-source research needing verification
+      • Transparency requirements or learning strategy
+      • Building foundation for follow-up work
       
-    Your background (when relevant):
-      "I'm a developer familiar with Python but new to ML..."
-      "I have a background in finance but not cryptocurrency..."
-      "I'm a casual viewer trying to decide if this show is for me..."
+      Skip when:
+      • Quick lookups, speed priority, one-off queries
+      • Findings sufficient without methodology
       
-    What you'll do with the information:
-      "I need to present findings to executives..."
-      "This is for personal decision-making..."
-      "I'm fact-checking claims in a debate..."
+      Overhead: +1-3s, significantly longer response
+    
+    async_mode (default: True, RECOMMENDED)
+      True = Returns task_id immediately, research runs in background. Prevents timeouts.
+      False = Waits for completion (only if client has no timeout limits)
       
-    What you already know:
-      "I know the basic premise but need deeper analysis..."
-      "I've heard conflicting claims about [X] and [Y]..."
-      "Previous research found [fact], now I need..."
+      Workflow: grok(prompt) → task_id → wait 20-60s → grok_check_task(task_id) → 
+                results or status
       
-    Conversation context:
-      "We discussed [topic] earlier - building on that..."
-      "This relates to the [previous question] about..."
-      
-    Context helps Grok:
-    - Prioritize information by relevance to your actual needs
-    - Adjust technical depth appropriately
-    - Focus on actionable insights vs academic completeness
-    - Recognize which sources are authoritative for your purpose
-    - Synthesize in ways that directly address your decision
+      Most MCP clients timeout at 10-30s; Grok queries take 15-60+s, hence async default.
+      Storage: 24h max, 100 tasks
     
+    ---
+    PROMPTING
     
-    PROMPTING FOR DIFFERENT RESEARCH DEPTHS:
+    CONTEXT (dramatically improves results):
+    Include: Why asking, background/expertise, what you'll do with info, what you 
+    already know, conversation continuity
     
-    Grok's depth adapts to your signals. Be explicit about what you need:
+    Example: "I'm evaluating ML frameworks for production. Python experience but new 
+    to ML infrastructure. Research..." vs just "Research ML frameworks"
     
-    Quick lookups:
-      Start with "Quick check:", "Brief summary:", "What's the latest:"
-      Grok will prioritize speed and conciseness
-      
-    Standard research:
-      "Research [topic]", "Investigate [question]", "Find information about:"
-      Grok will do thorough multi-source research with synthesis
-      
-    Comprehensive investigations:
-      Structure in phases/steps, request detailed analysis, specify many sources
-      Grok will do extensive systematic research with deep synthesis
-      
-    Monitoring/tracking:
-      "Check for updates:", "Any news from:", "What happened today with:"
-      Grok will focus on recent developments and changes
+    ADAPTIVE STYLE:
+    Simple → "Bitcoin price" | Medium → "Research [topic] checking X experts and web 
+    docs" | Complex → Numbered phases, specific sources, synthesis needs, output format
     
+    DEPTH SIGNALS:
+    "Quick check:" / "Brief:" = concise | "Research:" / "Investigate:" = standard | 
+    Multi-phase structure = comprehensive | "Check for updates:" = monitoring
     
-    STRUCTURING COMPLEX PROMPTS:
+    X PATTERNS:
+    Expert opinions: from:expert1 OR from:expert2 topic
+    Time-sensitive: topic since:2024-01-01 within_time:24h  
+    High quality: topic min_faves:100 min_retweets:50
+    Combined: (from:user1 OR from:user2) topic since:DATE min_faves:50 filter:verified -noise
     
-    For involved research, this structure works consistently well:
+    COMPLEX PROMPT STRUCTURE:
+    [Goal] → [Context/why] → [Phase 1: action + sources] → [Phase 2: action + extraction] 
+    → [Phase N: synthesis] → [Output: format/length/focus] → [Trail request if needed]
     
-    [Clear goal statement]
-      What you want to accomplish in one sentence
-      
-    [Context - why this matters]
-      Optional but helps Grok prioritize
-      
-    [Phase-by-phase breakdown]
-      1. First, do X (with specifics about sources/approach)
-      2. Then do Y (with extraction criteria)
-      3. Finally do Z (with synthesis requirements)
-      
-    [Output preferences]
-      "Structure as: [format]"
-      "Keep it under [length]" or "Be comprehensive"
-      "Focus on [aspects]"
-      
-    [Research trail request if needed]
-      Include if you want methodology documented
+    CODE REQUESTS:
+    Be specific: "Calculate CAGR using [data]" | Specify sources: "Use coingecko for 
+    Bitcoin prices [dates]" or provide data | Request verification: "Verify claim [X] 
+    using [method]" | Format: "Return as table/JSON/formatted"
     
+    SYNTHESIS REQUESTS:
+    Be explicit about what matters:
+    "Synthesize: What's the consensus among experts?"
+    "Analyze: Is this trend real or hype?"
+    "Compare: Which option is better for [use case]?"
+    "Evaluate: What are the risks vs benefits?"
+    "Explain: Why do researchers disagree about this?"
     
-    X SEARCH BEST PRACTICES:
+    Specify perspectives: "Give both sides" | "Focus on practical not theory" | 
+    "Decision-making insight not just facts"
     
-    The X platform is extraordinarily powerful when used effectively.
+    HANDLING UNCERTAINTY/CONFLICTS:
+    When information might conflict:
+    "Find claims about [X] and verify which are data-supported"
+    "I've heard both [A] and [B] - investigate which is accurate"
+    "Search for [topic] and note any disagreement among experts"
     
-    For expert opinions:
-      from:username1 OR from:username2 OR from:username3
-      List specific experts relevant to your topic
-      
-    For time-sensitive information:
-      since:YYYY-MM-DD or since:24_hours_ago or within_time:12h
-      until:YYYY-MM-DD for bounded searches
-      
-    For high-quality content:
-      min_faves:100 or min_retweets:50
-      Filters to engagement ensure quality and visibility
-      
-    For specific content types:
-      filter:links (posts with URLs)
-      filter:media (posts with images/videos)
-      filter:replies (posts that are replies)
-      filter:verified (from verified accounts)
-      
-    For URL filtering:
-      url:domain
-      
-    For focused topics:
-      "exact phrase" for precision
-      (keyword1 OR keyword2) AND keyword3 for combinations
-      -excluded_term to remove noise
-      
-    For discovering accounts:
-      Use X user search with descriptions of expertise
-      Then search from:those_users for their takes
-      
-    Combine operators freely:
-      (from:user1 OR from:user2) (topic OR "related phrase") since:2024-01-01 min_faves:50
-    
-    Remember: X is conversational and temporal. People discuss things in threads
-    over time. Use thread fetch when you need full context of a discussion, not
-    just individual posts.
-    
-    
-    CODE EXECUTION GUIDANCE:
-    
-    When requesting calculations or analysis:
-    
-    Be specific about what to calculate:
-      "Calculate compound annual growth rate using: [data/formula]"
-      "Analyze these numbers for: mean, median, std dev, outliers"
-      "Create comparison matrix of: [items] by [attributes]"
-      
-    Specify data sources:
-      "Use coingecko API to get Bitcoin price history for [dates]"
-      "Use polygon API for stock data on [ticker]"
-      "Process these numbers: [provide data]"
-      
-    Request verification:
-      "Verify the claim that [X] using: [method]"
-      "Check if this math is correct: [calculation]"
-      "Calculate to confirm whether [statement] is accurate"
-      
-    Indicate output format:
-      "Return as: table / JSON / formatted numbers / chart data"
-      "Show calculation steps so I can verify logic"
-    
-    Remember: Code runs offline. It can calculate, analyze, and process but 
-    cannot fetch data except via pre-configured APIs (coingecko, polygon) or 
-    data you provide in the prompt.
-    
-    
-    HANDLING UNCERTAINTY AND CONFLICTS:
-    
-    When you know information might be conflicting or unclear:
-    
-      "Find claims about [X] and verify which are supported by data"
-      "I've heard both [A] and [B] - investigate which is accurate"
-      "Search for [topic] and note any disagreement among experts"
-      
-    Grok will:
-    - Actively search for multiple perspectives
-    - Note when sources conflict
-    - Attempt verification through additional sources
-    - Use code to check numerical claims when possible
-    - Be explicit about confidence levels
-    
-    
-    BUILDING ON PREVIOUS RESEARCH:
-    
-    Since Grok is stateless, effective follow-ups require context:
-    
-    Good follow-up pattern:
-      "Previous research found [key findings]. Now dig deeper into [aspect]:
-       - Specifically investigate [sub-topic]
-       - Focus on [sources] not yet checked
-       - Compare with [new angle]"
-       
-    Include enough context that Grok can:
-    - Understand what's already known (avoid duplication)
-    - Recognize what's new about this query
-    - Build logically on previous findings
-    
-    If research trail was used previously, reference specific URLs or sources
-    found to help Grok understand what has been covered.
-    
-    
-    SYNTHESIS AND ANALYSIS REQUESTS:
-    
-    Grok excels at synthesis when you're clear about what matters:
-    
-      "Synthesize: What's the consensus among experts?"
-      "Analyze: Is this trend real or hype?"
-      "Compare: Which option is better for [use case]?"
-      "Evaluate: What are the risks and benefits?"
-      "Explain: Why do researchers disagree about this?"
-      
-    Be explicit about perspectives you want:
-    - "Give me both sides of the argument"
-    - "Focus on practical implications not theory"
-    - "I need decision-making insight not just facts"
-    - "Explain like I'm [your background level]"
-    
+    Grok will: Search multiple perspectives, note conflicts, verify numerically when 
+    possible, be explicit about confidence levels.
     
     OUTPUT FORMATTING:
-    
-    Grok structures responses intelligently but respects your preferences:
-    
-      "Structure as: Executive summary, detailed findings, conclusion"
-      "Format as: Table comparing [items] by [attributes]"
-      "Organize by: Time period / Category / Source credibility"
-      "Keep response under 500 words but include all key points"
-      "Be comprehensive - I want full detail on each item"
-      
-    For long systematic research, Grok automatically uses:
-    - Clear headings for major sections
-    - Bullet points for lists and key points
-    - Separation between analyzed items
-    - Summary sections when appropriate
-    
-    You can request different structures, but defaults are designed for
-    scannability even in extensive responses.
-    
-    
-    COMMON MISTAKES TO AVOID:
-    
-    Don't over-specify tool usage:
-      Bad: "Use x_keyword_search then browse_page then code_execution on..."
-      Good: "Research [topic] by checking X, official docs, and analyzing data"
-      Why: Grok's agency is its strength - let it choose the path
-      
-    Don't assume memory:
-      Bad: "Tell me more about that"
-      Good: "Building on the previous finding that [X], now investigate [Y]"
-      Why: Stateless execution requires explicit context
-      
-    Don't use Grok for things you know:
-      Bad: "What's the capital of France?" (you know this, or trained data knows)
-      Good: "What's the current political situation in France?" (needs research)
-      Why: Grok is for information gathering, not retrieving trained knowledge
-      
-    Don't be vague on scope:
-      Bad: "Tell me about AI"
-      Good: "Research the current state of multimodal AI models in 2024-2025"
-      Why: Specificity enables focused, useful research
-      
-    Don't forget time context for current events:
-      Bad: "What do people think about [recent event]?"
-      Good: "Search X for reactions to [recent event] from [time period]"
-      Why: Explicitly requesting X search + time bounds gets current discourse
-    
-    
-    WHEN NOT TO USE GROK:
-    
-    Reserve Grok for situations requiring external information. Skip Grok when:
-    
-    - You're asking about trained knowledge easily accessible without research
-    - Pure reasoning tasks with no factual dependencies
-    - Creative writing, brainstorming, or ideation
-    - Clarifying questions in conversation
-    - Explaining concepts already understood
-    - Responding to user feedback or questions
-    
-    Grok adds value when:
-    - Current/recent information needed (especially last 24-48 hours)
-    - Expert opinions and discourse matter
-    - Claims need verification or fact-checking
-    - Multiple sources need synthesis
-    - Numerical analysis or calculations required
-    - Systematic research of multiple items necessary
-    
-    
-    EXPERIMENTATION AND LEARNING:
-    
-    Grok's flexibility means you should experiment:
-    
-    - Try different prompt styles and see what works for your needs
-    - Vary levels of detail and structure
-    - Test different ways of requesting the same information
-    - Notice what works and iterate
-    
-    You'll develop intuition for:
-    - When to be brief vs detailed
-    - What context matters for different queries
-    - How to structure complex research effectively
-    - When X vs web is more appropriate
-    - When code execution adds value
-    
-    There's no single "correct" way to prompt Grok. Effective prompting is 
-    about clear communication of your goals and adaptation to the task at hand.
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    EXAMPLE APPROACHES
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    The following examples demonstrate the range and depth of Grok's capabilities.
-    They are NOT templates to copy - they're inspiration showing different styles
-    and approaches. Your prompts should adapt to your specific needs and can be
-    completely different in structure.
-    
-    
-    EXAMPLE 1: Comprehensive Financial Analysis
-    (Shows: Heavy systematic workload, code execution, multi-year data)
-    
-    "Perform investment due diligence on [company/startup]:
-    
-    1. Company fundamentals:
-       - Browse official website for products, team, business model
-       - Search for recent funding announcements and valuations
-       - Find technical documentation or whitepapers if available
-    
-    2. Financial analysis (if public):
-       - Search for financial reports or disclosed metrics
-       - Use code to calculate key ratios:
-         * Revenue growth rates (YoY, QoQ)
-         * Profit margins
-         * Burn rate if startup
-         * Compare to industry benchmarks
-       - Track financial trends over available periods
-    
-    3. Market positioning:
-       - Identify 3-5 direct competitors
-       - Browse competitor sites for comparison
-       - Search X for industry analyst opinions on this space
-       - Note market size and company's share if available
-    
-    4. Sentiment analysis:
-       - Search X for customer experiences (filter for genuine users not marketing)
-       - Look for both enthusiastic supporters and critical voices
-       - Search for any controversies, red flags, or concerns
-       - Check employee sentiment if available
-    
-    5. Expert opinions:
-       - Search X from relevant industry analysts and investors
-       - Find any thought leaders discussing this company/sector
-       - Note consensus view if one exists
-    
-    6. Risk assessment:
-       - Regulatory concerns in this space
-       - Competitive threats
-       - Technology risks or limitations
-       - Market timing considerations
-    
-    Synthesize into: Investment thesis with clear sections on strengths, 
-    concerns, financial health, market position, and recommendation with 
-    confidence level. Use code to create comparison matrices where helpful.
-    
-    Include research trail: True"
-    
-    
-    EXAMPLE 2: Deep Content Analysis
-    (Shows: Systematic multi-item research, historical X searches, long-form output)
-    
-    "Analyze the complete first season of [TV series] (all episodes):
-    
-    For each episode systematically:
-    1. Browse episode wiki or IMDB page for:
-       - Plot summary and key developments
-       - Air date and episode number
-       - Any notable production information
-    
-    2. Search X for viewer reactions when it originally aired:
-       - Use episode air date +/- 1 day for time bound
-       - Look for both enthusiastic and critical takes
-       - Note any specific moments that generated discussion
-    
-    3. Check for any critical reception or reviews
-    
-    Then synthesize across the full season:
-    - How does the narrative arc develop episode by episode?
-    - What major themes emerge and how do they evolve?
-    - Where is pacing effective or problematic?
-    - How did audience reception change over the season?
-    - Any standout episodes or particularly weak ones?
-    - If this is not the first season, how does it compare?
-    
-    Structure response as:
-    - Brief per-episode breakdown (3-5 bullets each with air date)
-    - Comprehensive season-level analysis
-    - Final assessment of season quality and evolution
-    
-    This will be a long response (likely 3000-5000 words) - that's expected
-    for systematic analysis of 10+ episodes."
-    
-    
-    EXAMPLE 3: Timeline Catchup Research
-    (Shows: Temporal research, context building, narrative synthesis)
-    
-    "Get me fully caught up on [major ongoing situation/conflict/policy change]:
-    
-    I need the complete timeline from beginning to present:
-    
-    1. Origins: What sparked this initially?
-       - Web search for background on how it started
-       - Identify key dates and triggering events
-    
-    2. Primary sources:
-       - Browse official statements, legislation, or policy documents
-       - Find announcements from key organizations/governments involved
-    
-    3. Evolution over time:
-       - Search X for how discourse evolved (use time-bounded searches)
-       - Identify major turning points and why they mattered
-       - Note shifts in public opinion or expert consensus
-    
-    4. Key players and positions:
-       - Who are the major stakeholders?
-       - What are their stated positions and actual actions?
-       - Search official accounts and statements
-    
-    5. Current state:
-       - What's the situation as of today?
-       - What's the active debate about?
-       - What are the near-term implications?
-    
-    Use code if helpful to organize timeline chronologically with dates.
-    
-    Provide complete chronological narrative from start to present, with context
-    for why each development mattered and how we got to the current state. Help
-    me understand not just what happened but why it progressed this way and what
-    the competing perspectives are.
-    
-    Structure with: Timeline summary (bullet points with dates), then detailed
-    narrative analysis, then current state assessment."
-    
-    
-    EXAMPLE 4: Daily Intelligence Brief
-    (Shows: Quick but sophisticated monitoring, efficient synthesis)
-    
-    "Daily AI development briefing:
-    
-    Quick checks across multiple sources:
-    - X: Posts from major AI labs (OpenAI, Anthropic, Google, Meta, xAI) 
-         from last 24 hours with min_faves:50 filter
-    - X: Semantic search for 'AI breakthrough' OR 'AI announcement' OR 'new model'
-         from last 24 hours, verified accounts
-    - Web: Quick check of major AI news sites for headlines
-    - X: Any trending discussions in AI community (high engagement posts)
-    
-    Synthesize into: 5-7 bullet points maximum covering what actually matters today.
-    For each item: one-sentence summary + why it's significant.
-    
-    Keep total response under 300 words - prioritize signal over noise. Skip minor
-    updates and focus on substantive developments only."
-    
-    
-    EXAMPLE 5: Simple Factual Query
-    (Shows: Grok handles simple queries efficiently too)
-    
-    "What is the current weather in Tokyo?"
-    
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    GETTING STARTED
-    ═══════════════════════════════════════════════════════════════════════════
-    
-    Start simple and experiment:
-    
-    - Begin with straightforward queries to understand Grok's style
-    - Try a moderately complex research task to see multi-source synthesis
-    - Experiment with different prompt structures to find what works for you
-    - Pay attention to what level of detail and context produces useful results
-    - Gradually increase complexity as you build intuition
-    
-    Grok adapts to you. There's no need to master everything immediately. Each
-    interaction will help you understand how to communicate your needs effectively.
-    
-    The key is clear communication of what you want to accomplish. Grok will
-    handle the complexity of figuring out how to achieve it.
-    
-    ═══════════════════════════════════════════════════════════════════════════
-    
+    Control structure and presentation:
+    "Structure as: Executive summary, detailed findings, conclusion"
+    "Format as: Table comparing [items] by [attributes]"
+    "Organize by: time period / category / source credibility"
+    "Keep under 500 words but include all key points"
+    "Be comprehensive - I want full detail on each item"
+    
+    Defaults: Clear headings, bullets, section separation, summaries when appropriate
+    
+    WHEN TO USE:
+    ✓ Current info (<48h), expert opinions, sentiment analysis, verification, multi-source 
+      synthesis, calculations, systematic research
+    ✗ Trained knowledge, pure reasoning, creative writing, clarifying questions
+    
+    AVOID:
+    ✗ Over-specifying tools (let Grok choose)
+    ✗ Assuming memory (include context)  
+    ✗ Vague scope (be specific)
+    ✗ Missing time context for current events
+    
+    ---
+    EXAMPLES (adapt, don't copy)
+    
+    Simple: "Bitcoin price"
+    
+    Brief: "AI developments last 24h: X from @OpenAI @AnthropicAI @GoogleAI min_faves:50, 
+    web headlines. 5 bullets <300w."
+    
+    Complex: "Due diligence [company]: 1) Site: products/team/model 2) Funding news/
+    valuations 3) Code: revenue growth, margins, burn vs benchmarks 4) Competitors: 
+    identify 3-5, compare 5) X: user sentiment (genuine not marketing) 6) X: analyst 
+    opinions 7) Risks: regulatory/competitive/tech. Synthesize: strengths, concerns, 
+    financial health, recommendation. Code for comparison matrices. Trail:True"
+    
+    Specialized: "Timeline [situation]: Origins (spark, dates) → primary sources (browse 
+    docs) → evolution (X time-bounded for discourse shifts) → key players/positions → 
+    current state. Code to organize chronologically. Full narrative with context for 
+    why developments mattered."
+    
+    ---
     Args:
-        prompt: Your research request, question, or task description. Can range
-                from a few words to extensively detailed multi-phase instructions.
-                
-        include_research_trail: Whether to include detailed methodology 
-                documentation showing Grok's research process step-by-step.
-                Default False.
-                
-        async_mode: If True (default), returns a task_id immediately. Research
-                executes in background; retrieve with grok_check_task(task_id).
-                If False, waits for completion (only use if your client has no
-                timeout limits). Default True.
+        prompt: Research request/question/task (brief to extensively detailed multi-phase)
+        include_research_trail: Document complete methodology (default: False)
+        async_mode: Return task_id immediately vs wait for completion (default: True)
     
     Returns:
-        Research findings, analysis, or answer to your query. Length varies from
-        brief responses to extensive multi-thousand word research reports based
-        on your prompt. If async_mode=True, returns a task_id instead - retrieve
-        results with grok_check_task().
+        Research findings/analysis (brief to multi-thousand words based on prompt). 
+        If async_mode=True, returns task_id - retrieve with grok_check_task().
     """
     
-    # Build the full prompt with research trail request if needed
     full_prompt = prompt
     
     if include_research_trail:
         full_prompt += """
 
 ---
+IMPORTANT - Document your research process at END:
 
-IMPORTANT - Document your research process:
+## Research Process (Step-by-Step)
 
-At the END of your response, include a section called:
-"## Research Process (Step-by-Step)"
+For EVERY action, document chronologically:
 
-For EVERY action you take, document in chronological order:
+**Step N: [Action]**
+- Reasoning: Why this approach
+- Tool: Exact name (web_search, browse_page, x_keyword_search, x_semantic_search, 
+  code_execution, etc.)
+- Parameters: Complete query/URL/code/filters
+- Found: Summary of results
+- Next: Decision based on results
 
-**Step N: [Brief action description]**
-- Reasoning: Why you chose this approach
-- Tool: Exact tool name (web_search, browse_page, x_keyword_search, x_semantic_search, code_execution, etc.)
-- Parameters:
-  * If web_search: Complete query string
-  * If browse_page: Full URL + instructions given
-  * If x_keyword_search: Query + limit + mode + any filters
-  * If x_semantic_search: Query + date range + other parameters
-  * If code_execution: The complete code block
-- Found: Summary of what this step returned
-- Next: What you decided to do next based on these results
-
-If any step failed or had issues (access errors, no results, etc.), 
-document that and explain how you adapted.
-
-Also include at the end:
+Document failures/issues and adaptations.
 
 ## Research Summary
 - Total steps: [count]
-- Tools used: [tool_name (N times), tool_name (N times), ...]
-- Sources accessed: [All URLs browsed, X posts found, etc.]
-- Key sources: [The 2-3 most important sources]
-- Search time ranges: [Date ranges if X searches were used]
-- Code executed: [Yes/No, if yes what for]
-- Overall approach: [2-3 sentence summary of research strategy]
-
-Be thorough and honest about your methodology.
+- Tools used: [tool_name (N times), ...]
+- Sources accessed: [All URLs, X posts, etc.]
+- Key sources: [Top 2-3]
+- Search time ranges: [Date ranges if applicable]
+- Code executed: [Yes/No, purpose]
+- Overall approach: [2-3 sentence strategy summary]
 """
     
-    # Handle async mode
     if async_mode:
         cleanup_old_tasks()
         task_id = f"grok_{uuid.uuid4().hex[:8]}"
@@ -942,18 +334,13 @@ Be thorough and honest about your methodology.
             "completed_at": None,
             "result": None,
             "error": None,
-            "prompt": prompt[:200]  # Store snippet for debugging
+            "prompt": prompt[:200]
         }
-        
-        # Start background task
         asyncio.create_task(execute_task_background(task_id, full_prompt))
-        
         return f"Task started: {task_id}\n\nUse grok_check_task('{task_id}') to retrieve results when ready."
     
-    # Synchronous execution
     result = await call_grok_api(full_prompt)
     return result
-
 
 @mcp.tool()
 async def grok_check_task(task_id: str) -> str:

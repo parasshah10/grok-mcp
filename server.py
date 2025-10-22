@@ -337,7 +337,14 @@ Document failures/issues and adaptations.
             "prompt": prompt[:200]
         }
         asyncio.create_task(execute_task_background(task_id, full_prompt))
-        return f"Task started: {task_id}\n\nUse grok_check_task('{task_id}') to retrieve results when ready."
+        
+        return f"""Task started: {task_id}
+
+Research task initiated. Expected completion time: 1-3 minutes.
+
+CRITICAL INSTRUCTION: Return control to the user immediately. Inform them that the research task is running in the background and will take approximately 1-3 minutes to complete. Wait for their next message before checking the results.
+
+When the user responds again, use grok_check_task('{task_id}') to retrieve the results."""
     
     result = await call_grok_api(full_prompt)
     return result
@@ -379,11 +386,16 @@ async def grok_check_task(task_id: str) -> str:
     status = task["status"]
     
     if status == "pending":
-        return "Status: pending - Task queued but not yet started. Check again shortly."
+        elapsed = int(time.time() - task["created_at"])
+        return f"""Task pending ({elapsed} seconds elapsed).
+
+The task is queued and will begin processing shortly. Research tasks typically complete in 1-3 minutes total. Return control to the user and inform them the task is initializing. Check status again when the user next interacts with you."""
     
     elif status == "running":
         elapsed = int(time.time() - task["created_at"])
-        return f"Status: running - Task in progress (elapsed: {elapsed}s). Check again in 15-30 seconds."
+        return f"""Task still running ({elapsed} seconds elapsed).
+
+Research tasks typically complete in 1-3 minutes total. Return control to the user and inform them the task is still in progress. Check status again when the user next interacts with you."""
     
     elif status == "completed":
         return task["result"]  # Return results directly, no prefix

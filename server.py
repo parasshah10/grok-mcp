@@ -179,14 +179,25 @@ async def grok(
       
       Overhead: +1-3s, significantly longer response
     
-    async_mode (default: True, RECOMMENDED)
-      True = Returns task_id immediately, research runs in background. Prevents timeouts.
-      False = Waits for completion (only if client has no timeout limits)
+    async_mode (default: True, MUST USE TRUE)
+      DO NOT SET TO FALSE. Grok research takes 30 seconds to 3 minutes. MCP clients 
+      timeout at 10-30 seconds. Using async_mode=False WILL FAIL with timeout errors, 
+      wasting time and providing no results.
       
-      Workflow: grok(prompt) → task_id → wait 20-60s → grok_check_task(task_id) → 
-                results or status
+      True (REQUIRED) = Returns task_id immediately, research runs in background, 
+                        prevents timeouts, always works reliably
+      False (NEVER USE) = Waits for completion, will timeout and fail in 99.9% of cases
       
-      Most MCP clients timeout at 10-30s; Grok queries take 15-60+s, hence async default.
+      Even "simple" queries typically take 30-60+ seconds due to web searches, page 
+      loading, X API calls, and code execution. The speed estimates above (6-120s) are 
+      MINIMUMS - most queries exceed MCP timeout limits.
+      
+      There is no valid reason to use async_mode=False in standard MCP environments. 
+      Only set to False if you have explicitly configured unlimited timeout settings 
+      in your MCP client (extremely rare).
+      
+      Workflow: grok(prompt) → task_id → wait 1-3 min → grok_check_task(task_id) → results
+      
       Storage: 24h max, 100 tasks
     
     ---
@@ -262,6 +273,7 @@ async def grok(
     ✗ Assuming memory (include context)  
     ✗ Vague scope (be specific)
     ✗ Missing time context for current events
+    ✗ Setting async_mode=False (will cause timeout failures)
     
     ---
     EXAMPLES (adapt, don't copy)
@@ -286,7 +298,7 @@ async def grok(
     Args:
         prompt: Research request/question/task (brief to extensively detailed multi-phase)
         include_research_trail: Document complete methodology (default: False)
-        async_mode: Return task_id immediately vs wait for completion (default: True)
+        async_mode: LEAVE AS TRUE. Only set False if you have unlimited timeout config (default: True, REQUIRED)
     
     Returns:
         Research findings/analysis (brief to multi-thousand words based on prompt). 

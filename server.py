@@ -93,18 +93,14 @@ async def execute_task_background(task_id: str, prompt: str):
         tasks[task_id]["completed_at"] = time.time()
 
 @mcp.tool()
-async def grok(
-    prompt: str,
-    include_research_trail: bool = False,
-    async_mode: bool = True
-) -> str:
+async def grok(prompt: str) -> str:
     """
     Autonomous Agentic Researcher: web and X search equipped.
 
     Stateless—restate context each call.
     
     PROVIDE:
-    - Objective/goal
+    - Objective
     - Context/background
     - Key questions to answer
     - Constraints (time, sources, depth)
@@ -112,6 +108,7 @@ async def grok(
     - A very rich high quality detailed prompt
     
     Grok follows your prompt. Prompt quality = output quality. Clear, thorough task descriptions produce comprehensive analysis. 
+
 
 
     Autonomous AI research platform with web search, X platform access, and code 
@@ -178,44 +175,6 @@ async def grok(
     word reports based on your prompt.
     
     ---
-    PARAMETERS
-    
-    include_research_trail (default: False)
-      True = Documents every query, URL, tool, reasoning, decision points
-      
-      Use when:
-      • Complex multi-source research needing verification
-      • Transparency requirements or learning strategy
-      • Building foundation for follow-up work
-      
-      Skip when:
-      • Quick lookups, speed priority, one-off queries
-      • Findings sufficient without methodology
-      
-      Overhead: +1-3s, significantly longer response
-    
-    async_mode (default: True, MUST USE TRUE)
-      DO NOT SET TO FALSE. Grok research takes 30 seconds to 3 minutes. MCP clients 
-      timeout at 10-30 seconds. Using async_mode=False WILL FAIL with timeout errors, 
-      wasting time and providing no results.
-      
-      True (REQUIRED) = Returns task_id immediately, research runs in background, 
-                        prevents timeouts, always works reliably
-      False (NEVER USE) = Waits for completion, will timeout and fail in 99.9% of cases
-      
-      Even "simple" queries typically take 30-60+ seconds due to web searches, page 
-      loading, X API calls, and code execution. The speed estimates above (6-120s) are 
-      MINIMUMS - most queries exceed MCP timeout limits.
-      
-      There is no valid reason to use async_mode=False in standard MCP environments. 
-      Only set to False if you have explicitly configured unlimited timeout settings 
-      in your MCP client (extremely rare).
-      
-      Workflow: grok(prompt) → task_id → wait 1-3 min → grok_check_task(task_id) → results
-      
-      Storage: 24h max, 100 tasks
-    
-    ---
     PROMPTING
     
     CONTEXT (dramatically improves results):
@@ -241,7 +200,7 @@ async def grok(
     
     COMPLEX PROMPT STRUCTURE:
     [Goal] → [Context/why] → [Phase 1: action + sources] → [Phase 2: action + extraction] 
-    → [Phase N: synthesis] → [Output: format/length/focus] → [Trail request if needed]
+    → [Phase N: synthesis] → [Output: format/length/focus]
     
     CODE REQUESTS:
     Be specific: "Calculate CAGR using [data]" | Specify sources: "Use coingecko for 
@@ -288,7 +247,6 @@ async def grok(
     ✗ Assuming memory (include context)  
     ✗ Vague scope (be specific)
     ✗ Missing time context for current events
-    ✗ Setting async_mode=False (will cause timeout failures)
     
     ---
     EXAMPLES (adapt, don't copy)
@@ -302,7 +260,7 @@ async def grok(
     valuations 3) Code: revenue growth, margins, burn vs benchmarks 4) Competitors: 
     identify 3-5, compare 5) X: user sentiment (genuine not marketing) 6) X: analyst 
     opinions 7) Risks: regulatory/competitive/tech. Synthesize: strengths, concerns, 
-    financial health, recommendation. Code for comparison matrices. Trail:True"
+    financial health, recommendation. Code for comparison matrices."
     
     Specialized: "Timeline [situation]: Origins (spark, dates) → primary sources (browse 
     docs) → evolution (X time-bounded for discourse shifts) → key players/positions → 
@@ -312,77 +270,73 @@ async def grok(
     ---
     Args:
         prompt: Research request/question/task (brief to extensively detailed multi-phase)
-        include_research_trail: Document complete methodology (default: False)
-        async_mode: LEAVE AS TRUE. Only set False if you have unlimited timeout config (default: True, REQUIRED)
     
     Returns:
-        Research findings/analysis (brief to multi-thousand words based on prompt). 
-        If async_mode=True, returns task_id - retrieve with grok_check_task().
+        Task ID for async retrieval. Research tasks run in background (1-3 minutes).
+        Use grok_check_task() to retrieve results.
     """
     
     full_prompt = prompt
     
-    if include_research_trail:
-        full_prompt += """
-
----
-IMPORTANT - Document your research process at END:
-
-## Research Process (Step-by-Step)
-
-For EVERY action, document chronologically:
-
-**Step N: [Action]**
-- Reasoning: Why this approach
-- Tool: Exact name (web_search, browse_page, x_keyword_search, x_semantic_search, 
-  code_execution, etc.)
-- Parameters: Complete query/URL/code/filters
-- Found: Summary of results
-- Next: Decision based on results
-
-Document failures/issues and adaptations.
-
-## Research Summary
-- Total steps: [count]
-- Tools used: [tool_name (N times), ...]
-- Sources accessed: [All URLs, X posts, etc.]
-- Key sources: [Top 2-3]
-- Search time ranges: [Date ranges if applicable]
-- Code executed: [Yes/No, purpose]
-- Overall approach: [2-3 sentence strategy summary]
-"""
+    # Research trail feature - kept for potential future use
+    # if include_research_trail:
+    #     full_prompt += """
+    #
+    # ---
+    # IMPORTANT - Document your research process at END:
+    #
+    # ## Research Process (Step-by-Step)
+    #
+    # For EVERY action, document chronologically:
+    #
+    # **Step N: [Action]**
+    # - Reasoning: Why this approach
+    # - Tool: Exact name (web_search, browse_page, x_keyword_search, x_semantic_search, 
+    #   code_execution, etc.)
+    # - Parameters: Complete query/URL/code/filters
+    # - Found: Summary of results
+    # - Next: Decision based on results
+    #
+    # Document failures/issues and adaptations.
+    #
+    # ## Research Summary
+    # - Total steps: [count]
+    # - Tools used: [tool_name (N times), ...]
+    # - Sources accessed: [All URLs, X posts, etc.]
+    # - Key sources: [Top 2-3]
+    # - Search time ranges: [Date ranges if applicable]
+    # - Code executed: [Yes/No, purpose]
+    # - Overall approach: [2-3 sentence strategy summary]
+    # """
     
-    if async_mode:
-        cleanup_old_tasks()
-        task_id = f"grok_{uuid.uuid4().hex[:8]}"
-        tasks[task_id] = {
-            "status": "pending",
-            "created_at": time.time(),
-            "completed_at": None,
-            "result": None,
-            "error": None,
-            "prompt": prompt[:200]
-        }
-        asyncio.create_task(execute_task_background(task_id, full_prompt))
-        
-        return f"""Task started: {task_id}
+    # Always use async mode
+    cleanup_old_tasks()
+    task_id = f"grok_{uuid.uuid4().hex[:8]}"
+    tasks[task_id] = {
+        "status": "pending",
+        "created_at": time.time(),
+        "completed_at": None,
+        "result": None,
+        "error": None,
+        "prompt": prompt[:200]
+    }
+    asyncio.create_task(execute_task_background(task_id, full_prompt))
+    
+    return f"""Task started: {task_id}
 
 Research task initiated. Expected completion time: 1-3 minutes.
 
 CRITICAL INSTRUCTION: Return control to the user immediately. Inform them that the research task is running in the background and will take approximately 1-3 minutes to complete. Wait for their next message before checking the results.
 
 When the user responds again, use grok_check_task('{task_id}') to retrieve the results."""
-    
-    result = await call_grok_api(full_prompt)
-    return result
 
 @mcp.tool()
 async def grok_check_task(task_id: str) -> str:
     """
     Check status and retrieve results of an async Grok task.
     
-    When grok() is called with async_mode=True, it returns a task_id. Use this
-    tool to check if the research is complete and get the results.
+    When grok() is called, it returns a task_id. Use this tool to check if the 
+    research is complete and get the results.
     
     Returns one of:
     - "Status: running" → Task in progress, check again in 15-30s
@@ -391,14 +345,14 @@ async def grok_check_task(task_id: str) -> str:
     - "Status: not_found" → Invalid/expired task_id (kept 24hrs, max 100 tasks)
     
     Workflow:
-    1. grok(prompt, async_mode=True) → Returns task_id
+    1. grok(prompt) → Returns task_id
     2. Wait 15-60s depending on complexity
     3. grok_check_task(task_id) → Check status
     4. If completed, full results returned
     5. If running, wait and check again
     
     Args:
-        task_id: Task identifier from grok() with async_mode=True
+        task_id: Task identifier from grok()
         
     Returns:
         Status update or full research results when completed

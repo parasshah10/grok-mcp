@@ -273,7 +273,7 @@ async def grok(prompt: str) -> str:
     
     Returns:
         Task ID for async retrieval. Research tasks run in background (1-3 minutes).
-        Use grok_check_task() to retrieve results.
+        Use grok_check_task tool to retrieve results.
     """
     
     full_prompt = prompt

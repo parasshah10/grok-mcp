@@ -327,8 +327,8 @@ async def grok(prompt: str) -> str:
 Research task initiated. Expected completion time: 1-3 minutes.
 
 CRITICAL INSTRUCTION: Return control to the user immediately. Inform them that the research task is running in the background and will take approximately 1-3 minutes to complete. Wait for their next message before checking the results.
-
-When the user responds again, use grok_check_task('{task_id}') to retrieve the results."""
+ 
+When the user responds again, use grok_check_task tool with '{task_id}' as task_id to retrieve the results."""
 
 @mcp.tool()
 async def grok_check_task(task_id: str) -> str:

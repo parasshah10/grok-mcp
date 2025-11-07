@@ -109,7 +109,7 @@ async def grok(
     - Key questions to answer
     - Constraints (time, sources, depth)
     - Deliverable/format
-    - A very high quality clear detailed prompt
+    - A very rich high quality detailed prompt
     
     Grok follows your prompt. Prompt quality = output quality. Clear, thorough task descriptions produce comprehensive analysis. 
 

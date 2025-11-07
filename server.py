@@ -99,6 +99,21 @@ async def grok(
     async_mode: bool = True
 ) -> str:
     """
+    Autonomous Agentic Researcher: web and X search equipped.
+
+    Stateless—restate context each call.
+    
+    PROVIDE:
+    - Objective/goal
+    - Context/background
+    - Key questions to answer
+    - Constraints (time, sources, depth)
+    - Deliverable/format
+    - A very high quality clear detailed prompt
+    
+    Grok follows your prompt. Prompt quality = output quality. Clear, thorough task descriptions produce comprehensive analysis. 
+
+
     Autonomous AI research platform with web search, X platform access, and code 
     execution. You describe goals, Grok intelligently determines which tools to use 
     and orchestrates execution strategy.

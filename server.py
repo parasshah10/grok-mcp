@@ -9,6 +9,7 @@ import os
 import time
 import uuid
 import asyncio
+import re
 from typing import Optional
 
 # Initialize MCP server
@@ -50,11 +51,8 @@ async def call_grok_api(prompt: str) -> str:
             if chunk.choices[0].delta.content is not None:
                 full_response += chunk.choices[0].delta.content
         
-        # Remove <think>...</think> from start if present
-        if full_response.startswith('<think>'):
-            end_tag = full_response.find('</think>')
-            if end_tag != -1:
-                full_response = full_response[end_tag + 8:].strip()  # +8 for len('</think>')
+        # Remove all <think>...</think> tags from anywhere in response
+        full_response = re.sub(r'<think>.*?</think>', '', full_response, flags=re.DOTALL).strip()
         
         return full_response
         

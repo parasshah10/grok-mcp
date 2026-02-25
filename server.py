@@ -37,7 +37,7 @@ async def call_grok_api(prompt: str) -> str:
     
     try:
         stream = await grok_client.chat.completions.create(
-            model="grok-4.1-fast",
+            model="grok-4.1-thinking",
             messages=[
                 {"role": "user", "content": prompt}
             ],
